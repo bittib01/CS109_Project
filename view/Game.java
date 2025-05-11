@@ -6,20 +6,22 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 
-/**
- * 主游戏窗口，支持鼠标拖拽、键盘控制和动画
- */
 public class Game extends JFrame {
     private final Board board;
     private final int cellSize = 100;  // 单元格像素大小
     private BoardPanel panel;
+
+    // —— 动画相关状态 ——
+    private Timer animTimer;            // Swing 定时器
+    private Block animBlock;            // 正在动画的方块
+    private Point animStart, animEnd;   // 起始/结束格子坐标
+    private int animStep, animSteps;    // 当前步数/总步数
 
     public Game(MapModel map) {
         this.board = new Board(map);
         initUI();
     }
 
-    // 初始化 UI
     private void initUI() {
         setTitle("华容道");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -29,7 +31,6 @@ public class Game extends JFrame {
         setLocationRelativeTo(null);
         setVisible(true);
 
-        // 键盘监听
         panel.setFocusable(true);
         panel.addKeyListener(new KeyAdapter() {
             @Override
@@ -37,32 +38,64 @@ public class Game extends JFrame {
                 Block focused = board.getFocused();
                 Block.Direction dir = null;
                 switch (e.getKeyCode()) {
-                    case KeyEvent.VK_UP:    dir = Block.Direction.UP; break;
-                    case KeyEvent.VK_DOWN:  dir = Block.Direction.DOWN; break;
-                    case KeyEvent.VK_LEFT:  dir = Block.Direction.LEFT; break;
+                    case KeyEvent.VK_UP:    dir = Block.Direction.UP;    break;
+                    case KeyEvent.VK_DOWN:  dir = Block.Direction.DOWN;  break;
+                    case KeyEvent.VK_LEFT:  dir = Block.Direction.LEFT;  break;
                     case KeyEvent.VK_RIGHT: dir = Block.Direction.RIGHT; break;
                 }
                 if (dir == null) return;
                 if (e.isControlDown()) {
                     board.moveFocus(dir);
+                    panel.repaint();
                 } else if (focused != null) {
                     animateMove(focused, dir);
                 }
-                panel.repaint();
             }
         });
     }
 
-    // 平滑动画移动
+    /**
+     * 平滑动画移动：先在模型中更新格子，再启动定时器按像素插值绘制
+     */
     private void animateMove(Block b, Block.Direction dir) {
+        // 1. 记录起始格子
+        Point oldPos = b.getPosition();
+
+        // 2. 尝试移动模型，若失败则直接返回
         if (!board.moveBlock(b, dir)) return;
-        // 可拓展：使用 Swing Timer 根据 b.getInertia() 控制动画帧间隔
+
+        // 3. 初始化动画状态
+        animBlock  = b;
+        animStart  = oldPos;
+        animEnd    = b.getPosition();
+        animSteps  = 15;                   // 分 15 步完成插值
+        animStep   = 0;
+        int delay  = (int)(10 * b.getInertia());
+
+        // 4. 启动定时器
+        if (animTimer != null && animTimer.isRunning()) {
+            animTimer.stop();
+        }
+        animTimer = new Timer(delay, e -> {
+            animStep++;
+            panel.repaint();
+            if (animStep >= animSteps) {
+                ((Timer)e.getSource()).stop();
+                animBlock = null;   // 动画结束
+                panel.repaint();
+            }
+        });
+        animTimer.start();
     }
 
-    // 负责绘制和鼠标交互
+    /**
+     * 负责绘制和鼠标交互
+     */
     private class BoardPanel extends JPanel {
         private Block dragging;
         private Point anchor;
+        private long pressTime;
+        private static final int CLICK_THRESHOLD = 100; // 毫秒
 
         public BoardPanel() {
             int w = util.Config.cols * cellSize;
@@ -72,6 +105,7 @@ public class Game extends JFrame {
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
+                    pressTime = System.currentTimeMillis();
                     int r = e.getY() / cellSize;
                     int c = e.getX() / cellSize;
                     Block b = board.getBlockAt(new Point(r, c));
@@ -80,28 +114,26 @@ public class Game extends JFrame {
                     anchor = e.getPoint();
                     repaint();
                 }
+
                 @Override
                 public void mouseReleased(MouseEvent e) {
-                    if (dragging != null) {
+                    long releaseTime = System.currentTimeMillis();
+                    long duration = releaseTime - pressTime;
+
+                    if (dragging != null && duration >= CLICK_THRESHOLD) {
+                        // 仅当按下时间超过阈值才视为拖动操作
                         int dr = e.getY() / cellSize - dragging.getPosition().x;
                         int dc = e.getX() / cellSize - dragging.getPosition().y;
-                        Block.Direction dir = null;
+                        Block.Direction dir;
                         if (Math.abs(dr) > Math.abs(dc)) {
                             dir = dr > 0 ? Block.Direction.DOWN : Block.Direction.UP;
                         } else {
                             dir = dc > 0 ? Block.Direction.RIGHT : Block.Direction.LEFT;
                         }
                         animateMove(dragging, dir);
-                        dragging = null;
-                        repaint();
                     }
-                }
-            });
-
-            addMouseMotionListener(new MouseMotionAdapter() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    // 可视上拖动效果（可选）
+                    // 如果时间较短则认为是点击，不执行拖动，仅更新焦点显示
+                    dragging = null;
                 }
             });
         }
@@ -111,17 +143,29 @@ public class Game extends JFrame {
             super.paintComponent(g);
             List<Block> list = board.getBlocks();
             for (Block b : list) {
-                Point pos = b.getPosition();
-                int x = pos.y * cellSize, y = pos.x * cellSize;
-                int w = b.getSize().width * cellSize, h = b.getSize().height * cellSize;
-                if (b == board.getFocused()) g.setColor(Color.ORANGE);
-                else g.setColor(Color.GRAY);
-                g.fillRoundRect(x+5, y+5, w-10, h-10, 20, 20);
+                int drawX, drawY;
+                if (b == animBlock) {
+                    float frac = (float)animStep / animSteps;
+                    int startX = animStart.y * cellSize;
+                    int startY = animStart.x * cellSize;
+                    int endX   = animEnd.y   * cellSize;
+                    int endY   = animEnd.x   * cellSize;
+                    drawX = Math.round(startX + (endX - startX) * frac);
+                    drawY = Math.round(startY + (endY - startY) * frac);
+                } else {
+                    Point pos = b.getPosition();
+                    drawX = pos.y * cellSize;
+                    drawY = pos.x * cellSize;
+                }
+
+                int w = b.getSize().width * cellSize;
+                int h = b.getSize().height * cellSize;
+                g.setColor(b == board.getFocused() ? Color.ORANGE : Color.GRAY);
+                g.fillRoundRect(drawX + 5, drawY + 5, w - 10, h - 10, 20, 20);
             }
         }
     }
 
-    // 程序入口
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             MapModel map = new MapModel("map.txt");
