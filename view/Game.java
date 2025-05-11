@@ -1,6 +1,8 @@
 package view;
 
 import model.*;
+import util.Config;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -36,13 +38,13 @@ public class Game extends JFrame {
             @Override
             public void keyPressed(KeyEvent e) {
                 Block focused = board.getFocused();
-                Block.Direction dir = null;
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_UP:    dir = Block.Direction.UP;    break;
-                    case KeyEvent.VK_DOWN:  dir = Block.Direction.DOWN;  break;
-                    case KeyEvent.VK_LEFT:  dir = Block.Direction.LEFT;  break;
-                    case KeyEvent.VK_RIGHT: dir = Block.Direction.RIGHT; break;
-                }
+                Block.Direction dir = switch (e.getKeyCode()) {
+                    case KeyEvent.VK_UP -> Block.Direction.UP;
+                    case KeyEvent.VK_DOWN -> Block.Direction.DOWN;
+                    case KeyEvent.VK_LEFT -> Block.Direction.LEFT;
+                    case KeyEvent.VK_RIGHT -> Block.Direction.RIGHT;
+                    default -> null;
+                };
                 if (dir == null) return;
                 if (e.isControlDown()) {
                     board.moveFocus(dir);
@@ -68,7 +70,7 @@ public class Game extends JFrame {
         animBlock  = b;
         animStart  = oldPos;
         animEnd    = b.getPosition();
-        animSteps  = 15;                   // 分 15 步完成插值
+        animSteps  = 10;                   // 分 15 步完成插值
         animStep   = 0;
         int delay  = (int)(10 * b.getInertia());
 
@@ -92,14 +94,14 @@ public class Game extends JFrame {
      * 负责绘制和鼠标交互
      */
     private class BoardPanel extends JPanel {
-        private Block dragging;
-        private Point anchor;
+        private Point draggingPoint;
+        private Block draggingBlock;
         private long pressTime;
         private static final int CLICK_THRESHOLD = 100; // 毫秒
 
         public BoardPanel() {
-            int w = util.Config.cols * cellSize;
-            int h = util.Config.rows * cellSize;
+            int w = Config.cols * cellSize;
+            int h = Config.rows * cellSize;
             setPreferredSize(new Dimension(w, h));
 
             addMouseListener(new MouseAdapter() {
@@ -108,10 +110,10 @@ public class Game extends JFrame {
                     pressTime = System.currentTimeMillis();
                     int r = e.getY() / cellSize;
                     int c = e.getX() / cellSize;
+                    draggingPoint = new Point(e.getY(), e.getX());
                     Block b = board.getBlockAt(new Point(r, c));
+                    draggingBlock = b;
                     board.setFocused(b);
-                    dragging = b;
-                    anchor = e.getPoint();
                     repaint();
                 }
 
@@ -120,20 +122,22 @@ public class Game extends JFrame {
                     long releaseTime = System.currentTimeMillis();
                     long duration = releaseTime - pressTime;
 
-                    if (dragging != null && duration >= CLICK_THRESHOLD) {
+                    if (draggingBlock != null && duration >= CLICK_THRESHOLD) {
                         // 仅当按下时间超过阈值才视为拖动操作
-                        int dr = e.getY() / cellSize - dragging.getPosition().x;
-                        int dc = e.getX() / cellSize - dragging.getPosition().y;
+                        int dr = e.getY() - draggingPoint.x;
+                        int dc = e.getX() - draggingPoint.y;
                         Block.Direction dir;
                         if (Math.abs(dr) > Math.abs(dc)) {
                             dir = dr > 0 ? Block.Direction.DOWN : Block.Direction.UP;
-                        } else {
+                            animateMove(draggingBlock, dir);
+                        } else if (Math.abs(dc) > Math.abs(dr)) {
                             dir = dc > 0 ? Block.Direction.RIGHT : Block.Direction.LEFT;
+                            animateMove(draggingBlock, dir);
                         }
-                        animateMove(dragging, dir);
                     }
                     // 如果时间较短则认为是点击，不执行拖动，仅更新焦点显示
-                    dragging = null;
+                    draggingBlock = null;
+                    draggingPoint = null;
                 }
             });
         }
