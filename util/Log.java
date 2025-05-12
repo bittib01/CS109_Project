@@ -5,13 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * 支持级别控制和文件输出的轻量级日志工具类（枚举单例优化版）
- * <p>功能特性：</p>
- * <p>- 基于枚举实现线程安全的单例模式（JVM保证唯一性）</p>
- * <p>- 支持四种日志级别（ERROR/WARNING/INFO/DETAIL）</p>
- * <p>- 自动创建日志文件父目录（若不存在）</p>
- * <p>- 支持动态调整日志级别阈值</p>
- * <p>- 日志格式包含时间戳、级别和消息内容</p>
+ * 支持级别控制和文件输出的轻量级日志工具类（使用枚举类实现单例）
  */
 public class Log {
 
@@ -19,7 +13,7 @@ public class Log {
      * 日志级别枚举类（优先级数值越低，优先级越高）
      */
     public enum Level {
-        ERROR(1), WARNING(2), INFO(3), DETAIL(4);
+        ERROR(1), WARNING(2), INFO(3), DEBUG(4);
 
         private final int priority;
 
@@ -54,19 +48,21 @@ public class Log {
     }
 
     /**
-     * 枚举单例持有者（JVM保证全局唯一）
+     * 枚举单例（全局唯一）
      */
     private enum Singleton {
         INSTANCE;
 
         private final Log logInstance;
 
-        // 枚举构造方法（JVM保证仅执行一次）
+        /**
+         * 枚举构造方法（仅执行一次）
+         */
         Singleton() {
             try {
                 // 使用默认日志路径和默认级别初始化
-                logInstance = new Log("application.log");
-                logInstance.setLevel(Level.INFO);
+                logInstance = new Log("HuaRongRoad.log");
+                logInstance.setLevel("info");
             } catch (IOException e) {
                 throw new RuntimeException("日志实例初始化失败", e);
             }
@@ -78,15 +74,22 @@ public class Log {
     }
 
     /**
-     * 获取日志单例实例（线程安全）
+     * 获取单例实例
      * @return 日志工具实例
      */
     public static Log getInstance() {
         return Singleton.INSTANCE.getInstance();
     }
 
-    public void setLevel(Level level) {
-        this.currentLevel = level;
+    public void setLevel(String s) {
+
+        this.currentLevel = switch (s) {
+            case "info", "INFO" -> Level.INFO;
+            case "warning", "WARNING" -> Level.WARNING;
+            case "error", "ERROR" -> Level.ERROR;
+            case "debug", "DEBUG" -> Level.DEBUG;
+            default -> throw new IllegalStateException("未知等级: " + s);
+        };
     }
 
     public synchronized void log(Level level, String message) {
@@ -107,17 +110,6 @@ public class Log {
     public void error(String msg) {log(Level.ERROR, msg);}
     public void warn(String msg) {log(Level.WARNING, msg);}
     public void info(String msg) {log(Level.INFO, msg);}
-    public void detail(String msg) {log(Level.DETAIL, msg);}
+    public void detail(String msg) {log(Level.DEBUG, msg);}
 
-    /**
-     * Log类使用示例
-     */
-    public static void main(String[] args) {
-        Log log = Log.getInstance();
-        log.setLevel(Level.INFO);
-        log.detail("detail");
-        log.warn("warn");
-        log.info("info");
-        log.error("error");
-    }
 }

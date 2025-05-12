@@ -1,5 +1,8 @@
 package model;
 
+import util.Log;
+import util.Config;
+
 import java.awt.Point;
 import java.util.List;
 
@@ -7,13 +10,17 @@ import java.util.List;
  * 棋盘模型，负责管理方块碰撞、选择与移动逻辑
  */
 public class Board {
-    private final int rows = util.Config.rows;
-    private final int cols = util.Config.cols;
+    Log log = Log.getInstance();
+    Config config = Config.getInstance();
+    private final int rows = config.getInt("rows");
+    private final int cols = config.getInt("cols");
     private final List<Block> blocks;
+    private final List<Point> victoryCells;
     private Block focused;
 
-    public Board(MapModel model) {
+    public Board(Map model) {
         this.blocks = model.getBlocks();
+        this.victoryCells = model.getVictoryCells();
     }
 
     /**
@@ -47,6 +54,9 @@ public class Board {
             }
         }
         b.setPosition(next);
+        if (isVictory()) {
+            log.info("Victory");
+        }
         return true;
     }
 
@@ -68,4 +78,30 @@ public class Board {
     }
 
     public List<Block> getBlocks() { return blocks; }
+
+    /**
+     * 判断是否胜利：
+     * 当前关卡的大方块完全覆盖了所有胜利区格子
+     */
+    public boolean isVictory() {
+        // 找到主目标方块（假设只有一个 LARGE 类型）
+        Block main = null;
+        for (Block b : blocks) {
+            if (b.getType() == Block.Type.LARGE) {
+                main = b;
+                break;
+            }
+        }
+        if (main == null) return false;
+
+        List<Point> occ = main.getOccupiedCells();
+        // 每个胜利格子都要被 main 占据
+        for (Point v : victoryCells) {
+            boolean covered = occ.stream().anyMatch(p -> p.equals(v));
+            if (!covered) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

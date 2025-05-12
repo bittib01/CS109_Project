@@ -60,13 +60,12 @@ public class Block {
      * @return 新的左上角坐标
      */
     public Point getNextPosition(Direction dir) {
-        switch (dir) {
-            case UP:    return new Point(position.x - 1, position.y);
-            case DOWN:  return new Point(position.x + 1, position.y);
-            case LEFT:  return new Point(position.x, position.y - 1);
-            case RIGHT: return new Point(position.x, position.y + 1);
-            default:    return new Point(position);
-        }
+        return switch (dir) {
+            case UP -> new Point(position.x - 1, position.y);
+            case DOWN -> new Point(position.x + 1, position.y);
+            case LEFT -> new Point(position.x, position.y - 1);
+            case RIGHT -> new Point(position.x, position.y + 1);
+        };
     }
 
     // Getter / Setter
