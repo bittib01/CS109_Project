@@ -19,9 +19,20 @@ public class Start extends JPanel {
         welcome.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
         add(welcome, BorderLayout.CENTER);
 
-        JButton enterBtn = new JButton("进入登录");
-        add(enterBtn, BorderLayout.SOUTH);
+        // 创建底部面板（使用FlowLayout）
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setLayout(new FlowLayout(FlowLayout.CENTER)); // 按钮居中排列
 
-        enterBtn.addActionListener(e -> basic.showPanel("login"));
+        // 添加按钮到底部面板
+        JButton button1 = new JButton("用户账号");
+        JButton button2 = new JButton("游客登录");
+
+        bottomPanel.add(button1);
+        bottomPanel.add(button2);
+
+        add(bottomPanel, BorderLayout.SOUTH);
+
+        button1.addActionListener(e -> basic.showPanel("login"));
+        button2.addActionListener(e -> basic.showPanel("select"));
     }
 }

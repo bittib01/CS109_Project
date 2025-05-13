@@ -8,6 +8,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
+
+/**
+ * 用户控制器（使用枚举实现单例）
+ */
 public class UserController {
     // 日志
     Log log = Log.getInstance();
@@ -17,7 +21,10 @@ public class UserController {
     private Map<String, User> users = new HashMap<>();
     private User currentUser;
 
-    public UserController() {
+    /**
+     * 私有构造方法（仅允许枚举单例调用），从指定文件加载用户配置
+     */
+    private UserController() {
         loadUsers();
     }
 
@@ -56,6 +63,34 @@ public class UserController {
     }
 
     /**
+     * 枚举单例（全局唯一）
+     */
+    private enum Singleton {
+        INSTANCE;
+
+        private final UserController userControllerInstance;
+
+        /**
+         * 枚举构造方法（仅执行一次）
+         */
+        Singleton() {
+            userControllerInstance = new UserController();
+        }
+
+        private UserController getInstance() {
+            return userControllerInstance;
+        }
+    }
+
+    /**
+     * 获取单例实例
+     * @return 设置工具实例
+     */
+    public static UserController getInstance() {
+        return UserController.Singleton.INSTANCE.getInstance();
+    }
+
+    /**
      * 计算字符串的 MD5 值
      * @param input 输入字符串
      * @return 输入字符串的MD5值
@@ -83,13 +118,13 @@ public class UserController {
      */
     public boolean register(String username, String password) {
         if (users.containsKey(username)) {
-            System.out.println(username + " 已存在，注册失败！");
+            log.warn(username + " 已存在，注册失败！");
             return false;
         }
         String hash = md5(password);
         users.put(username, new User(username, hash));
         saveUsers();
-        System.out.println(username + " 注册成功！");
+        log.info(username + " 注册成功！");
         return true;
     }
 
@@ -101,17 +136,17 @@ public class UserController {
      */
     public boolean changePassword(String oldPassword, String newPassword) {
         if (currentUser == null) {
-            System.out.println("修改密码前请先登录！");
+            log.warn("修改密码前请先登录！");
             return false;
         }
         String username = currentUser.getUsername();
         if (!currentUser.checkPassword(md5(oldPassword))) {
-            System.out.println(username + " 修改密码失败：旧密码输入不正确");
+            log.warn(username + " 修改密码失败：旧密码输入不正确");
             return false;
         }
         currentUser.setPasswordHash(md5(newPassword));
         saveUsers();
-        System.out.println(username + " 修改密码成功");
+        log.info(username + " 修改密码成功");
         return true;
     }
 
@@ -122,12 +157,12 @@ public class UserController {
      */
     public boolean changeUsername(String newUsername) {
         if (currentUser == null) {
-            System.out.println("修改用户名前请先登录！");
+            log.warn("修改用户名前请先登录！");
             return false;
         }
         String oldUsername = currentUser.getUsername();
         if (users.containsKey(newUsername)) {
-            System.out.println(newUsername + " 已存在，修改失败！");
+            log.warn(newUsername + " 已存在，修改失败！");
             return false;
         }
         // 从 map 中移除旧键
@@ -138,7 +173,7 @@ public class UserController {
         users.put(newUsername, currentUser);
         // 保存到文件
         saveUsers();
-        System.out.println(oldUsername + " 已修改用户名为 " + newUsername);
+        log.info(oldUsername + " 已修改用户名为 " + newUsername);
         return true;
     }
 
@@ -153,10 +188,10 @@ public class UserController {
             }
             user.setLoggedIn(true);
             currentUser = user;
-            System.out.println(username + ", 欢迎你！");
+            log.info(username + ", 欢迎你！");
             return true;
         }
-        System.out.println(username + " 登录失败：用户名或密码输入错误");
+        log.warn(username + " 登录失败：用户名或密码输入错误");
         return false;
     }
 
@@ -165,11 +200,11 @@ public class UserController {
      */
     public void logout() {
         if (currentUser != null) {
-            System.out.println(currentUser.getUsername() + " 已退出");
+            log.info(currentUser.getUsername() + " 已退出");
             currentUser.setLoggedIn(false);
             currentUser = null;
         } else {
-            System.out.println("无法退出没有登录的用户");
+            log.warn("无法退出没有登录的用户");
         }
     }
 
@@ -177,7 +212,7 @@ public class UserController {
      * 切换用户
      */
     public boolean switchUser(String username, String password) {
-        System.out.println("正在切换用户到：" + username);
+        log.info("正在切换用户到：" + username);
         logout();
         return login(username, password);
     }

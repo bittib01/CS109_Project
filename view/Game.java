@@ -53,19 +53,19 @@ public class Game extends JPanel {
                 Block focused = board.getFocused();
                 Block.Direction dir = switch (e.getKeyCode()) {
                     case KeyEvent.VK_UP -> {
-                        log.detail("VK_UP");
+                        log.debug("VK_UP");
                         yield Block.Direction.UP;
                     }
                     case KeyEvent.VK_DOWN -> {
-                        log.detail("VK_DOWN");
+                        log.debug("VK_DOWN");
                         yield Block.Direction.DOWN;
                     }
                     case KeyEvent.VK_LEFT -> {
-                        log.detail("VK_LEFT");
+                        log.debug("VK_LEFT");
                         yield Block.Direction.LEFT;
                     }
                     case KeyEvent.VK_RIGHT -> {
-                        log.detail("VK_RIGHT");
+                        log.debug("VK_RIGHT");
                         yield Block.Direction.RIGHT;
                     }
                     default -> null;

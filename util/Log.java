@@ -1,11 +1,12 @@
 package util;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * 支持级别控制和文件输出的轻量级日志工具类（使用枚举类实现单例）
+ * 支持级别控制、文件输出的轻量级日志工具类（使用枚举类实现单例）
  */
 public class Log {
 
@@ -81,8 +82,10 @@ public class Log {
         return Singleton.INSTANCE.getInstance();
     }
 
+    /**
+     * 设置日志级别
+     */
     public void setLevel(String s) {
-
         this.currentLevel = switch (s) {
             case "info", "INFO" -> Level.INFO;
             case "warning", "WARNING" -> Level.WARNING;
@@ -92,10 +95,26 @@ public class Log {
         };
     }
 
-    public synchronized void log(Level level, String message) {
+    /**
+     * 获取调用者信息：类名/方法名:行号
+     */
+    private String getCallerInfo() {
+        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+        if (stack.length > 4) {
+                StackTraceElement elem = stack[4];
+                return elem.getClassName() + "." + elem.getMethodName() + ":" + elem.getLineNumber();
+        }
+        return "Unknown";
+    }
+
+    /**
+     * 基础日志方法，自动添加时间戳、级别、调用者信息
+     */
+    private synchronized void log(Level level, String message) {
         if (level.getPriority() <= currentLevel.getPriority()) {
             String timestamp = dateFormat.format(new Date());
-            String line = String.format("%s [%s] %s", timestamp, level.name(), message);
+            String caller = getCallerInfo();
+            String line = String.format("%s [%s] [%s] %s", timestamp, level.name(), caller, message);
 
             try {
                 writer.write(line);
@@ -107,9 +126,9 @@ public class Log {
         }
     }
 
-    public void error(String msg) {log(Level.ERROR, msg);}
-    public void warn(String msg) {log(Level.WARNING, msg);}
-    public void info(String msg) {log(Level.INFO, msg);}
-    public void detail(String msg) {log(Level.DEBUG, msg);}
+    public void error(String msg) { log(Level.ERROR, msg); }
+    public void warn(String msg) { log(Level.WARNING, msg); }
+    public void info(String msg) { log(Level.INFO, msg); }
+    public void debug(String msg) { log(Level.DEBUG, msg); }
 
 }
