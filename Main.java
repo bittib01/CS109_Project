@@ -10,9 +10,11 @@ import javax.swing.*;
  */
 public class Main {
     public static void main(String[] args) {
+        UserController userController = UserController.getInstance();
         Config config = Config.getInstance();
         Log log = Log.getInstance();
         log.setLevel(config.getString("level"));
+        userController.login("Guest", "Guest");
         SwingUtilities.invokeLater(() -> {
             Basic basic = new Basic();
             // 添加各页面

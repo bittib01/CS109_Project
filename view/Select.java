@@ -2,7 +2,6 @@ package view;
 
 import model.GameMap;
 import model.Board;
-import model.Block;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -43,7 +42,7 @@ public class Select extends JPanel {
         // 列表与预览面板分割
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 new JScrollPane(mapList), previewPanel);
-        splitPane.setResizeWeight(0.4);
+        splitPane.setResizeWeight(0.02);
         splitPane.setDividerSize(4);
         add(splitPane, BorderLayout.CENTER);
 
@@ -61,8 +60,13 @@ public class Select extends JPanel {
                     String name = mapList.getSelectedValue();
                     if (name != null) {
                         GameMap map = new GameMap("maps" + File.separator + name + ".txt");
-                        previewPanel.setMap(map);
-                        infoPanel.updateInfo(map);
+                        if (map.isValid()) {
+                            previewPanel.setMap(map);
+                            infoPanel.updateInfo(map);
+                        } else {
+                            previewPanel.setText("地图文件不合法！");
+                            infoPanel.updateInfo("");
+                        }
                     }
                 }
             }
@@ -79,6 +83,11 @@ public class Select extends JPanel {
                 return;
             }
             GameMap map = new GameMap("maps" + File.separator + name + ".txt");
+            if (!map.isValid()) {
+                JOptionPane.showMessageDialog(Select.this,
+                        "请选择一个合法地图！", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             basic.addPanel("game", new Game(basic, map));
             basic.showPanel("game");
         });
@@ -93,7 +102,13 @@ public class Select extends JPanel {
         }
 
         public void setMap(GameMap map) {
+            setShowText(false);
             this.board = new Board(map);
+            repaint();
+        }
+
+        public void setText(String text) {
+            super.setText(text);
             repaint();
         }
     }
@@ -117,6 +132,12 @@ public class Select extends JPanel {
             sizeLabel.setText("尺寸：" + map.getRows() + " × " + map.getCols());
             blockLabel.setText("方块数：" + map.getBlocks().size());
             victoryLabel.setText("胜利区数：" + map.getVictoryCells().size());
+        }
+
+        public void updateInfo(String text) {
+            sizeLabel.setText(text);
+            blockLabel.setText(text);
+            victoryLabel.setText(text);
         }
     }
 }

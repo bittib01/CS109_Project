@@ -19,8 +19,11 @@ public class GameMap {
     private boolean[][] victoryZone;
     private final List<Block> blocks = new ArrayList<>();
     private final Log log = Log.getInstance();
+    private boolean isValid = true;
+    private String mapName;
 
     public GameMap(String filename) {
+        this.mapName = filename;
         List<String[]> rawLines = new ArrayList<>();
         // 先读取所有行，拆分为字符串数组
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
@@ -30,7 +33,8 @@ public class GameMap {
                 rawLines.add(parts);
             }
         } catch (IOException e) {
-            log.error("读取地图文件失败: " + e.getMessage());
+            log.warn("读取地图文件失败: " + e.getMessage());
+            isValid = false;
         }
 
         // 动态确定行列数
@@ -38,6 +42,11 @@ public class GameMap {
         cols = rawLines.stream()
                 .mapToInt(parts -> parts.length)
                 .max().orElse(0);
+
+        if (rows == 0 || cols == 0 ) {
+            log.warn("地图文件 "+ filename + " 不能为空");
+            isValid = false;
+        }
 
         // 初始化数组
         layout = new int[rows][cols];
@@ -58,7 +67,8 @@ public class GameMap {
                     try {
                         layout[r][c] = Integer.parseInt(cell);
                     } catch (NumberFormatException nfe) {
-                        log.error("地图文件格式错误: 行" + (r+1) + " 列" + (c+1) + " 内容='" + cell + "'");
+                        log.warn("地图文件格式错误: 行" + (r+1) + " 列" + (c+1) + " 内容='" + cell + "'");
+                        isValid = false;
                         layout[r][c] = 0;
                     }
                 }
@@ -67,6 +77,10 @@ public class GameMap {
 
         validateLayout();
         initBlocks();
+
+        if (getVictoryCells().size() < 4) {
+            isValid = false;
+        }
     }
 
     // 校验合法性
@@ -85,6 +99,7 @@ public class GameMap {
             int count = cells.size();
             if (count != 1 && count != 2 && count != 4) {
                 log.error("ID=" + id + " 格子数非法：" + count);
+                isValid = false;
             }
             int minR = cells.stream().mapToInt(p -> p.x).min().orElse(0);
             int maxR = cells.stream().mapToInt(p -> p.x).max().orElse(0);
@@ -93,6 +108,7 @@ public class GameMap {
             int h = maxR - minR + 1, w = maxC - minC + 1;
             if (h * w != count || h < 1 || h > 2 || w < 1 || w > 2) {
                 log.error("ID=" + id + " 形状非法: " + h + "×" + w);
+                isValid = false;
             }
         }
     }
@@ -118,9 +134,19 @@ public class GameMap {
             if (count == 1) type = Block.Type.SMALL;
             else if (count == 2) {
                 Point p0 = cells.get(0), p1 = cells.get(1);
-                type = (p0.x == p1.x) ? Block.Type.VERTICAL : Block.Type.HORIZONTAL;
+                type = (p0.x == p1.x) ? Block.Type.HORIZONTAL : Block.Type.VERTICAL;
             } else type = Block.Type.LARGE;
             blocks.add(new Block(type, start));
+        }
+        boolean flag = false;
+        for (Block block : blocks) {
+            if (block.getType() == Block.Type.LARGE) {
+                flag = true;
+            }
+        }
+        if (!flag) {
+            isValid = false;
+            log.warn(mapName + "非法：无曹操");
         }
     }
 
@@ -153,5 +179,9 @@ public class GameMap {
     /** 获取完整布局数组 */
     public int[][] getLayout() {
         return layout;
+    }
+
+    public boolean isValid() {
+        return isValid;
     }
 }

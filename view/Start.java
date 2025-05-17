@@ -1,5 +1,7 @@
 package view;
 
+import util.UserController;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -13,6 +15,7 @@ public class Start extends JPanel {
      * @param basic 基础窗口引用，用于页面切换
      */
     public Start(Basic basic) {
+        UserController userController = UserController.getInstance();
         setLayout(new BorderLayout());
 
         JLabel welcome = new JLabel("欢迎来到华容道游戏", JLabel.CENTER);
@@ -33,6 +36,8 @@ public class Start extends JPanel {
         add(bottomPanel, BorderLayout.SOUTH);
 
         button1.addActionListener(e -> basic.showPanel("login"));
-        button2.addActionListener(e -> basic.showPanel("select"));
+        button2.addActionListener(e -> {
+            basic.showPanel("select");
+        });
     }
 }

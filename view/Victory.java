@@ -27,6 +27,6 @@ public class Victory extends JPanel {
         add(btnPanel, BorderLayout.SOUTH);
 
         retryBtn.addActionListener(e -> basic.showPanel("select"));
-        exitBtn.addActionListener(e -> System.exit(0));
+        exitBtn.addActionListener(e -> basic.showPanel("select"));
     }
 }
