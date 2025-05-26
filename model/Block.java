@@ -11,12 +11,14 @@ public class Block {
     public enum Type { SMALL, HORIZONTAL, VERTICAL, LARGE }
     public enum Direction { UP, DOWN, LEFT, RIGHT }
 
+    private final int id;
     private final Type type;
     private Point position;
     private final float inertia;
     private final Dimension size;
 
-    public Block(Type type, Point start) {
+    public Block(int id, Type type, Point start) {
+        this.id = id;
         this.type = type;
         this.position = new Point(start);
         switch (type) {
@@ -55,9 +57,14 @@ public class Block {
         };
     }
 
+    public int getId() {return id;}
     public Type getType() { return type; }
     public Point getPosition() { return new Point(position); }
     public void setPosition(Point p) { this.position = new Point(p); }
     public Dimension getSize() { return new Dimension(size); }
     public float getInertia() { return inertia; }
+
+    public Block copy() {
+        return new Block(this.getId(), this.getType(), new Point(this.getPosition()));
+    }
 }

@@ -20,8 +20,6 @@ public class Main {
             // 添加各页面
             basic.addPanel("start", new Start(basic));
             basic.addPanel("login", new Login(basic));
-            basic.addPanel("select", new Select(basic));
-            basic.addPanel("victory", new Victory(basic));
             // 首先显示开始页面
             basic.showPanel("start");
             basic.setVisible(true);

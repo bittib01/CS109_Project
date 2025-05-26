@@ -37,6 +37,7 @@ public class Start extends JPanel {
 
         button1.addActionListener(e -> basic.showPanel("login"));
         button2.addActionListener(e -> {
+            basic.addPanel("select", new Select(basic));
             basic.showPanel("select");
         });
     }

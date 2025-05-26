@@ -5,36 +5,31 @@ import util.UserController;
 
 import javax.swing.*;
 import java.awt.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 /**
- * 胜利页面，显示本次用时和步数，若创纪录则提示。
+ * 失败页面，显示本次用时和步数，并鼓励玩家重试。
  */
-public class Victory extends JPanel {
+public class Failure extends JPanel {
 
     /**
      * 构造方法
-     * @param basic 基础窗口，用于页面切换
-     * @param map 当前地图
-     * @param mode 游戏模式
-     * @param moves 完成步数
-     * @param elapsed 用时毫秒
-     * @param isNewTimeRecord 是否打破最快用时纪录
-     * @param isNewMovesRecord 是否打破最少步数纪录
+     * @param basic     基础窗口，用于页面切换
+     * @param map       当前地图（用于重试操作）
+     * @param mode      游戏模式
+     * @param moves     本次尝试步数
+     * @param elapsed   用时毫秒
      */
-    public Victory(Basic basic,
+    public Failure(Basic basic,
                    GameMap map,
                    Game.Mode mode,
                    int moves,
-                   long elapsed,
-                   boolean isNewTimeRecord,
-                   boolean isNewMovesRecord) {
+                   long elapsed) {
         setLayout(new BorderLayout(10, 10));
 
         // 顶部提示
-        JLabel title = new JLabel("恭喜通关！", JLabel.CENTER);
+        JLabel title = new JLabel("挑战失败！", JLabel.CENTER);
         title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
+        title.setForeground(Color.RED);
         add(title, BorderLayout.NORTH);
 
         // 中央统计信息
@@ -43,7 +38,7 @@ public class Victory extends JPanel {
         center.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // 步数和时间
-        JLabel movesLabel = new JLabel("完成步数：" + moves, JLabel.CENTER);
+        JLabel movesLabel = new JLabel("本次步数：" + moves, JLabel.CENTER);
         JLabel timeLabel  = new JLabel("用时：" + formatTime(elapsed), JLabel.CENTER);
         movesLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
         timeLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
@@ -51,34 +46,27 @@ public class Victory extends JPanel {
         center.add(Box.createVerticalStrut(10));
         center.add(timeLabel);
 
-        // 纪录提示
-        if (isNewTimeRecord || isNewMovesRecord) {
-            String msg = "您创造了新的";
-            if (isNewTimeRecord) msg += "最快用时";
-            if (isNewTimeRecord && isNewMovesRecord) msg += "、";
-            if (isNewMovesRecord) msg += "最少步数";
-            msg += "记录！";
-            JLabel recLabel = new JLabel(msg, JLabel.CENTER);
-            recLabel.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 16));
-            recLabel.setForeground(new Color(0xD2691E));
-            center.add(Box.createVerticalStrut(15));
-            center.add(recLabel);
-        }
+        // 鼓励提示
+        JLabel hintLabel = new JLabel("再接再厉，下次一定能过！", JLabel.CENTER);
+        hintLabel.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 16));
+        hintLabel.setForeground(new Color(0x8B4513));
+        center.add(Box.createVerticalStrut(15));
+        center.add(hintLabel);
 
         add(center, BorderLayout.CENTER);
 
-        // 按钮区：重玩 本地图 或 退出到选单
+        // 按钮区：重试本地图 或 退出到选单
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
-        JButton replayBtn = new JButton("重玩本地图");
-        JButton menuBtn   = new JButton("返回选单");
-        btnPanel.add(replayBtn);
+        JButton retryBtn = new JButton("重试本地图");
+        JButton menuBtn  = new JButton("返回选单");
+        btnPanel.add(retryBtn);
         btnPanel.add(menuBtn);
         add(btnPanel, BorderLayout.SOUTH);
 
         // 事件绑定
-        replayBtn.addActionListener(e -> {
-            basic.showPanel("game");
+        retryBtn.addActionListener(e -> {
             Game game = (Game) basic.getPanel("game");
+            basic.showPanel("game");
             game.replay();
         });
         menuBtn.addActionListener(e -> {

@@ -79,6 +79,7 @@ public class Login extends JPanel {
                 // 清空输入
                 userField.setText("");
                 passField.setText("");
+                basic.addPanel("select", new Select(basic));
                 basic.showPanel("select");
             } else {
                 // 登录失败，提示错误
@@ -100,6 +101,7 @@ public class Login extends JPanel {
                 userController.login(username, password);
                 userField.setText("");
                 passField.setText("");
+                basic.addPanel("select", new Select(basic));
                 basic.showPanel("select");
             } else {
                 JOptionPane.showMessageDialog(this, "注册失败：用户名已存在。", "错误", JOptionPane.ERROR_MESSAGE);
