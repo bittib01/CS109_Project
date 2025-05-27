@@ -18,7 +18,7 @@ public class UserController {
     // 用户文件地址
     private static final String USER_FILE = "users.txt";
     // 用户表：用户名 -> User 对象
-    private Map<String, User> users = new HashMap<>();
+    private final Map<String, User> users = new HashMap<>();
     private User currentUser;
 
     /**
@@ -129,55 +129,6 @@ public class UserController {
     }
 
     /**
-     * 修改当前用户密码
-     * @param oldPassword 旧密码
-     * @param newPassword 新密码
-     * @return 修改成功返回<code>true</code>，否则返回<code>false</code>
-     */
-    public boolean changePassword(String oldPassword, String newPassword) {
-        if (currentUser == null) {
-            log.warn("修改密码前请先登录！");
-            return false;
-        }
-        String username = currentUser.getUsername();
-        if (!currentUser.checkPassword(md5(oldPassword))) {
-            log.warn(username + " 修改密码失败：旧密码输入不正确");
-            return false;
-        }
-        currentUser.setPasswordHash(md5(newPassword));
-        saveUsers();
-        log.info(username + " 修改密码成功");
-        return true;
-    }
-
-    /**
-     * 修改当前登录用户的用户名
-     * @param newUsername 新用户名
-     * @return 修改成功返回<code>true</code>，否则返回<code>false</code>
-     */
-    public boolean changeUsername(String newUsername) {
-        if (currentUser == null) {
-            log.warn("修改用户名前请先登录！");
-            return false;
-        }
-        String oldUsername = currentUser.getUsername();
-        if (users.containsKey(newUsername)) {
-            log.warn(newUsername + " 已存在，修改失败！");
-            return false;
-        }
-        // 从 map 中移除旧键
-        users.remove(oldUsername);
-        // 更新 User 对象中的用户名
-        currentUser.setUsername(newUsername);
-        // 将用户对象以新用户名重新加入 map
-        users.put(newUsername, currentUser);
-        // 保存到文件
-        saveUsers();
-        log.info(oldUsername + " 已修改用户名为 " + newUsername);
-        return true;
-    }
-
-    /**
      * 用户登录
      */
     public boolean login(String username, String password) {
@@ -211,10 +162,10 @@ public class UserController {
     /**
      * 切换用户
      */
-    public boolean switchUser(String username, String password) {
+    public void switchUser(String username, String password) {
         log.info("正在切换用户到：" + username);
         logout();
-        return login(username, password);
+        login(username, password);
     }
 
     public User getCurrentUser() {

@@ -1,19 +1,19 @@
 package view;
 
-import model.GameMap;
-import model.Board;
 import model.Block;
-import util.Log;
+import model.Board;
+import model.GameMap;
 import util.Saver;
 import util.UserController;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -36,14 +36,13 @@ public class Game extends JPanel {
     private JPanel topBar;                            // 顶部导航栏，用于刷新
     private final GameMap map;                        // 地图模型
 
-    private int completedCount = 0;                   // 完成次数统计
+    private int completedCount;                   // 完成次数统计
     private long bestTime;                            // 最佳时长
     private int bestMoves;                            // 最佳步数
 
-    private Board board;                              // 棋盘模型
+    private final Board board;                              // 棋盘模型
     private InteractiveBoardPanel panel;              // 交互面板
-    private Basic basic;                              // 顶层面板管理器
-    private final Log log = Log.getInstance();        // 日志
+    private final Basic basic;                              // 顶层面板管理器
 
     private JLabel timeLabel;                         // 时间显示
     private JLabel movesLabel;                        // 步数显示
@@ -65,9 +64,9 @@ public class Game extends JPanel {
                 userController.getCurrentUser().getUsername(), map);
         if (opt.isPresent()) {
             Saver.Stats s = opt.get();
-            this.completedCount = s.getCompletedCount();
-            this.bestTime = s.getBestTime();
-            this.bestMoves = s.getBestMoves();
+            this.completedCount = s.completedCount();
+            this.bestTime = s.bestTime();
+            this.bestMoves = s.bestMoves();
         } else {
             // 默认无历史
             this.completedCount = 0;
@@ -121,7 +120,7 @@ public class Game extends JPanel {
             JButton save = new JButton("存档");
             save.addActionListener(e -> {
                 String user = userController.getCurrentUser().getUsername();
-                Saver.saveManual(board, map, user,
+                Saver.saveManual(map, user,
                         completedCount, bestTime, bestMoves,
                         mode.toString(), board.getHistory(),
                         System.currentTimeMillis() - startTime);
@@ -131,14 +130,12 @@ public class Game extends JPanel {
             left.add(save);
             // 读取存档
             JButton load = new JButton("读取存档");
-            load.addActionListener(e -> {
-                load();
-            });
+            load.addActionListener(e -> load());
             left.add(load);
         } else {
             // 登录/注册
-            JButton login = new JButton("登录"); login.addActionListener(e -> showLoginDialog()); left.add(login);
-            JButton reg   = new JButton("注册"); reg.addActionListener(e -> showRegisterDialog()); left.add(reg);
+            JButton login = new JButton("登录"); login.addActionListener(e -> StyledDialog.showLoginDialog(this, this::refreshTopBar)); left.add(login);
+            JButton reg   = new JButton("注册"); reg.addActionListener(e -> StyledDialog.showRegisterDialog(this, this::refreshTopBar)); left.add(reg);
         }
 
         // 右侧：返回、重玩、撤销、控制面板、步数、时间
@@ -149,7 +146,7 @@ public class Game extends JPanel {
             long time = System.currentTimeMillis() - startTime;
             if (!userController.getCurrentUser().getUsername().equals("Guest")) {
                 Saver.saveManual(
-                        board, map, userController.getCurrentUser().getUsername(),
+                        map, userController.getCurrentUser().getUsername(),
                         completedCount, bestTime, bestMoves, mode.toString(),
                         board.getHistory(), time
                 );
@@ -190,49 +187,6 @@ public class Game extends JPanel {
             JOptionPane.showMessageDialog(this, "读取存档错误："+ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
         }
         panel.requestFocusInWindow();
-    }
-
-    /**
-     * 弹出登录对话框
-     */
-    private void showLoginDialog() {
-        JTextField userField = new JTextField(15);
-        JPasswordField pwdField = new JPasswordField(15);
-        JPanel p = new JPanel(new GridLayout(2,2,5,5));
-        p.add(new JLabel("用户名:")); p.add(userField);
-        p.add(new JLabel("密码:")); p.add(pwdField);
-        int r = JOptionPane.showConfirmDialog(this, p, "用户登录", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (r == JOptionPane.OK_OPTION) {
-            String u = userField.getText().trim();
-            String pw = new String(pwdField.getPassword());
-            if (userController.login(u, pw)) {
-                refreshTopBar();
-            } else {
-                JOptionPane.showMessageDialog(this, "登录失败：用户名或密码错误", "错误", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    /**
-     * 弹出注册对话框
-     */
-    private void showRegisterDialog() {
-        JTextField userField = new JTextField(15);
-        JPasswordField pwdField = new JPasswordField(15);
-        JPanel p = new JPanel(new GridLayout(2,2,5,5));
-        p.add(new JLabel("用户名:")); p.add(userField);
-        p.add(new JLabel("密码:")); p.add(pwdField);
-        int r = JOptionPane.showConfirmDialog(this, p, "用户注册", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (r == JOptionPane.OK_OPTION) {
-            String u = userField.getText().trim();
-            String pw = new String(pwdField.getPassword());
-            if (userController.register(u, pw)) {
-                userController.login(u, pw);
-                refreshTopBar();
-            } else {
-                JOptionPane.showMessageDialog(this, "用户名已存在，注册失败！", "错误", JOptionPane.ERROR_MESSAGE);
-            }
-        }
     }
 
     /**
@@ -292,7 +246,7 @@ public class Game extends JPanel {
             timeText += String.format("/%02d:%02d", limit / 60, limit % 60);
             if (elapsed > limit * 1000L) {
                 int mv = board.getHistory().size();
-                basic.addPanel("failure", new Failure(basic, map, mode, mv, elapsed));
+                basic.addPanel("failure", new Failure(basic, map, mv, elapsed));
                 replay();
                 clockTimer.stop();
                 basic.showPanel("failure");
@@ -309,7 +263,7 @@ public class Game extends JPanel {
             if (mv > lim) {
                 clockTimer.stop();
                 long el2 = System.currentTimeMillis() - startTime;
-                basic.addPanel("failure", new Failure(basic, map, mode, mv, el2));
+                basic.addPanel("failure", new Failure(basic, map, mv, el2));
                 replay();
                 basic.showPanel("failure");
                 return;
@@ -418,19 +372,19 @@ public class Game extends JPanel {
                         clockTimer.stop();
                         completedCount++;
                         long e = System.currentTimeMillis() - startTime;
-                        bestTime = Math.min(bestTime, e);
                         int mv = board.getHistory().size();
-                        bestMoves = Math.min(bestMoves, mv);
                         boolean nt = e < bestTime;
                         boolean nm = mv < bestMoves;
+                        bestTime = Math.min(bestTime, e);
+                        bestMoves = Math.min(bestMoves, mv);
                         if (!userController.getCurrentUser().getUsername().equals("Guest")) {
                             Saver.saveResult(
-                                    board, map, userController.getCurrentUser().getUsername(),
+                                    map, userController.getCurrentUser().getUsername(),
                                     completedCount, bestTime, bestMoves, mode.toString(),
                                     board.getHistory(), e
                             );
                         }
-                        basic.addPanel("victory", new Victory(basic, map, mode, mv, e, nt, nm));
+                        basic.addPanel("victory", new Victory(basic, map, mv, e, nt, nm));
                         basic.showPanel("victory");
                     }
                 }
@@ -459,8 +413,6 @@ public class Game extends JPanel {
                 int w = animBlock.getSize().width * cellSize;
                 int h = animBlock.getSize().height * cellSize;
 
-                // 计数
-                Map<Block.Type, Integer> typeCount = new HashMap<>();
 
                 g2.setColor(typeColor.getOrDefault(animBlock.getType(), new Color(0xCCCCCC)));
                 g2.fillRoundRect(x + 4, y + 4, w - 8, h - 8, 16, 16);
@@ -477,27 +429,14 @@ public class Game extends JPanel {
                 }
 
 
-                List<String> names;
-                switch (animBlock.getType()) {
-                    case SMALL:      names = smallNames;      break;
-                    case HORIZONTAL: names = horizontalNames; break;
-                    case VERTICAL:   names = verticalNames;   break;
-                    case LARGE:      names = largeNames;      break;
-                    default:         names = List.of("");
-                }
+                List<String> names = switch (animBlock.getType()) {
+                    case SMALL -> smallNames;
+                    case HORIZONTAL -> horizontalNames;
+                    case VERTICAL -> verticalNames;
+                    case LARGE -> largeNames;
+                };
                 if (!names.isEmpty()) {
-                    List<Block> sameTypeBlocks = board.getBlocks().stream()
-                            .filter(block -> block.getType() == animBlock.getType())
-                            .toList();
-                    int idx = sameTypeBlocks.indexOf(animBlock);
-                    String label = names.get(idx % names.size());
-
-                    Font font = getFont().deriveFont(Font.BOLD, cellSize * 0.4f);
-                    g2.setFont(font);
-                    FontMetrics fm = g2.getFontMetrics();
-                    int tw = fm.stringWidth(label), th = fm.getAscent();
-                    g2.setColor(new Color(0x333333));
-                    g2.drawString(label, x + (w - tw) / 2, y + (h + th) / 2 - 4);
+                    paintTextInBlock(animBlock, names, cellSize, g2, x, w, y, h);
                 }
             }
             skipBlock = null;

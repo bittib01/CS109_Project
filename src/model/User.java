@@ -1,8 +1,8 @@
 package model;
 
 public class User {
-    private String username;
-    private String passwordHash;
+    private final String username;
+    private final String passwordHash;
     private boolean loggedIn;
 
     public User(String username, String password) {
@@ -15,22 +15,12 @@ public class User {
         return username;
     }
 
-    public void setUsername(String username) { this.username = username; }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
     public boolean checkPassword(String passwordHash) {
         return this.passwordHash.equals(passwordHash);
     }
 
     public String getPasswordHash() {
         return passwordHash;
-    }
-
-    public boolean isLoggedIn() {
-        return loggedIn;
     }
 
     public void setLoggedIn(boolean loggedIn) {

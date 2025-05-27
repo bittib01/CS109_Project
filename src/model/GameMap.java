@@ -39,7 +39,7 @@ public class GameMap {
     /** 地图有效性标记（布局验证通过后为true） */
     private boolean isValid = true;
     /** 地图文件名（完整路径），用于标识地图名称 */
-    private String mapName;
+    private final String mapName;
 
     /**
      * 通过指定地图文件路径初始化地图对象
@@ -260,14 +260,6 @@ public class GameMap {
      */
     public int getCols() {
         return cols;
-    }
-
-    /**
-     * 获取完整布局矩阵
-     * @return 二维数组形式的布局数据（行优先）
-     */
-    public int[][] getLayout() {
-        return layout;
     }
 
     /**
