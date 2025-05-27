@@ -146,9 +146,17 @@ public class Game extends JPanel {
         // 返回选单
         JButton toMenu=new JButton("返回选单");
         toMenu.addActionListener(e->{
+            long time = System.currentTimeMillis() - startTime;
+            if (!userController.getCurrentUser().getUsername().equals("Guest")) {
+                Saver.saveManual(
+                        board, map, userController.getCurrentUser().getUsername(),
+                        completedCount, bestTime, bestMoves, mode.toString(),
+                        board.getHistory(), time
+                );
+            }
             clockTimer.stop();
-            basic.showPanel("select");
             Select s=(Select)basic.getPanel("select"); s.updateInfoPanel(map); s.updateStats(map); s.refreshTopBar();
+            basic.showPanel("select");
         }); right.add(toMenu);
         // 重玩
         JButton replay=new JButton("重玩"); replay.addActionListener(e->replay()); right.add(replay);
@@ -415,11 +423,13 @@ public class Game extends JPanel {
                         bestMoves = Math.min(bestMoves, mv);
                         boolean nt = e < bestTime;
                         boolean nm = mv < bestMoves;
-                        Saver.saveResult(
-                                board, map, userController.getCurrentUser().getUsername(),
-                                completedCount, bestTime, bestMoves, mode.toString(),
-                                board.getHistory(), e
-                        );
+                        if (!userController.getCurrentUser().getUsername().equals("Guest")) {
+                            Saver.saveResult(
+                                    board, map, userController.getCurrentUser().getUsername(),
+                                    completedCount, bestTime, bestMoves, mode.toString(),
+                                    board.getHistory(), e
+                            );
+                        }
                         basic.addPanel("victory", new Victory(basic, map, mode, mv, e, nt, nm));
                         basic.showPanel("victory");
                     }
